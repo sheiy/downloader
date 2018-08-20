@@ -51,6 +51,7 @@ public class DownloadFuture {
             try {
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 if (Objects.equals(end, total)) {
+                    //部分服务器最后一个分段不能设置结尾byte值否则状态码和返回的inputStream都不对
                     connection.addRequestProperty("Range", String.format("bytes=%d-", start));
                 } else {
                     connection.addRequestProperty("Range", String.format("bytes=%d-%d", start, end));

@@ -24,6 +24,9 @@ public class Downloader {
     private int threadNumber;
 
     public Downloader(URL url, int threadNumber) {
+        if(threadNumber<=0){
+            throw new IllegalArgumentException("下载线程数不能小于1");
+        }
         this.url = url;
         this.threadNumber = threadNumber;
     }
