@@ -6,8 +6,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -22,9 +24,21 @@ public class Downloader {
 
     private URL url;
     private int threadNumber;
+    private File saveFile;
+    private final String savePath;
+
+    public Downloader(String url, String savePath, int threadNumber) throws MalformedURLException {
+        if (threadNumber < 1) {
+            throw new IllegalArgumentException("下载线程数不能小于1");
+        }
+        this.url = new URL(url);
+        this.threadNumber = threadNumber;
+        this.savePath = savePath;
+    }
 
     public Downloader(URL url, int threadNumber) {
-        if(threadNumber<=0){
+        this.savePath = null;
+        if (threadNumber < 1) {
             throw new IllegalArgumentException("下载线程数不能小于1");
         }
         this.url = url;
@@ -44,7 +58,12 @@ public class Downloader {
         long total = connection.getContentLengthLong();
         log.info("文件总长:" + total + "字节");
 
-        File saveFile = Files.createTempFile(UUID.randomUUID().toString().replaceAll("-", ""), ".tmp").toFile();
+        if (this.savePath != null) {
+            this.saveFile = Paths.get(this.savePath).toFile();
+        } else {
+            saveFile = Files.createTempFile(UUID.randomUUID().toString().replaceAll("-", ""), ".tmp").toFile();
+        }
+
         log.info("文件将存储到:{}", saveFile.getAbsolutePath());
 
         RandomAccessFile accessFile = new RandomAccessFile(saveFile, "rw");
@@ -52,7 +71,7 @@ public class Downloader {
         accessFile.close();
 
         long blockSize = total / threadNumber;
-        for (int i = 0; i < threadNumber; i++) {
+        for (int i = 1; i < threadNumber; i++) {
             long endPos;
             long startPos = i * blockSize;
             if (i == threadNumber - 1) {
@@ -65,6 +84,10 @@ public class Downloader {
             tasks.add(downloadFuture);
             downloadFuture.start();
         }
+        log.info("主线程下载的部分为：" + 0 + "-" + (blockSize - 1));
+        DownloadFuture downloadFuture = new DownloadFuture(saveFile, url, 0, blockSize - 1, total);
+        tasks.add(downloadFuture);
+        downloadFuture.run();
         while (true) {
             List<DownloadFuture> done = tasks.stream().filter(DownloadFuture::isDone).collect(Collectors.toList());
             if (done.size() == threadNumber) {

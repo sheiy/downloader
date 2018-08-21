@@ -2,9 +2,7 @@ package site.ownw.download;
 
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.File;
-import java.io.InputStream;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Objects;
@@ -31,23 +29,12 @@ public class DownloadFuture {
 
     private FutureTask<Void> task;
 
-    private Long start;
-    private Long end;
-    private URL url;
     private String error;
-    private File toSave;
-    private Long total;
 
     public DownloadFuture(File toSave, URL url, long start, long end, long total) {
-        this.url = url;
-        this.start = start;
-        this.end = end;
-        this.toSave = toSave;
-        this.total = total;
-    }
-
-    public void start() {
-        task = new FutureTask<>(() -> {
+        this.task = new FutureTask<>(() -> {
+            RandomAccessFile raf = null;
+            InputStream is = null;
             try {
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 if (Objects.equals(end, total)) {
@@ -62,20 +49,27 @@ public class DownloadFuture {
                     throw new IllegalStateException("状态码异常(code=" + connection.getResponseCode() + ")");
                 }
                 log.info("状态码正常开始下载{}---{}", start, end);
-                InputStream is = connection.getInputStream();
+                is = connection.getInputStream();
                 int len;
                 byte[] buf = new byte[1024];
-                RandomAccessFile raf = new RandomAccessFile(toSave, "rw");
+                raf = new RandomAccessFile(toSave, "rw");
                 raf.seek(start);
                 while ((len = is.read(buf)) > 0) {
                     raf.write(buf, 0, len);
                 }
-                raf.close();
-                is.close();
             } catch (Exception e) {
                 this.error = e.getMessage();
+            } finally {
+                closeStream(raf, is);
             }
         }, null);
+    }
+
+    public void run(){
+        this.task.run();
+    }
+
+    public void start() {
         EXECUTOR.execute(task);
     }
 
@@ -85,5 +79,19 @@ public class DownloadFuture {
 
     public String getError() {
         return error;
+    }
+
+    private void closeStream(Closeable... closeables) {
+        for (Closeable closeable : closeables) {
+            try {
+                closeable.close();
+            } catch (IOException e) {
+                if (this.error.isEmpty()) {
+                    this.error = e.getMessage();
+                } else {
+                    this.error = "," + e.getMessage();
+                }
+            }
+        }
     }
 }
