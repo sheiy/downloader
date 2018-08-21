@@ -5,8 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>site.ownw</groupId>
-    <artifactId>download</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <artifactId>downloader</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
 
     <dependencies>
         <dependency>
@@ -24,6 +24,7 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>1.16.22</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -45,6 +46,5 @@
             </plugin>
         </plugins>
     </build>
-
 
 </project>
